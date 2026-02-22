@@ -123,6 +123,23 @@ jobs:
       contents: write
 
     steps:
+      - name: Checkout (for CHANGELOG)
+        uses: actions/checkout@v4
+
+      - name: Extract release notes from CHANGELOG
+        id: release_notes
+        run: |
+          # Extract the content between "## Unreleased" and the next "## " heading
+          notes=$(awk '/^## Unreleased/{found=1; next} found && /^## /{exit} found{print}' CHANGELOG.md | sed '/^[[:space:]]*$/d' | sed '/^_.*_$/d')
+          if [ -z "$notes" ]; then
+            notes="No release notes provided."
+          fi
+          # Write outside the workspace root so it is not wiped by artifact extraction
+          mkdir -p /tmp/release
+          echo "$notes" > /tmp/release/release_notes.md
+          echo "Release notes:"
+          cat /tmp/release/release_notes.md
+
       - name: Download build artifacts
         uses: actions/download-artifact@v4
 
@@ -131,27 +148,11 @@ jobs:
           ls -R
           # extract tar.gz build archives from downloaded artifacts
           # (wrapped in tar from actions/upload-artifact, then extracted into a directory by actions/download-artifact)
-          for D in * 
+          for D in *
             do if [ -d "${D}" ]; then
               mv $D/* ./
             fi
           done;
-
-      - name: Checkout (for CHANGELOG)
-        uses: actions/checkout@v4
-
-      - name: Extract release notes from CHANGELOG
-        id: release_notes
-        run: |
-          # Extract the content between the first "## Unreleased" heading and the next "## " heading
-          notes=$(awk '/^## Unreleased/{found=1; next} found && /^## /{exit} found{print}' CHANGELOG.md | sed '/^[[:space:]]*$/d' | sed '/^_.*_$/d')
-          if [ -z "$notes" ]; then
-            notes="No release notes provided."
-          fi
-          # Write to a file to safely handle multiline content
-          echo "$notes" > release_notes.md
-          echo "Release notes:"
-          cat release_notes.md
 
       - name: Create hash file
         run: |
@@ -162,6 +163,6 @@ jobs:
         with:
           artifacts: "*.tar.gz,${{needs.build.outputs.driver_id}}.hash"
           draft: false
-          bodyFile: release_notes.md
+          bodyFile: /tmp/release/release_notes.md
           artifactErrorsFailBuild: true
           tag: v${{needs.build.outputs.version}}
