@@ -1,41 +1,36 @@
 {
-  "driver_id": "your_device_driver",
+  "driver_id": "uc_intg_channels",
   "version": "0.1.0",
   "min_core_api": "0.20.0",
-  "name": { "en": "Your Device Name" },
+  "name": { "en": "Channels" },
   "icon": "uc:integration",
   "description": {
-    "en": "Control your network-connected device"
+    "en": "Control the Channels app live TV, DVR playback, and more from your Unfolded Circle Remote."
   },
   "developer": {
-    "name": "Your Name",
-    "email": "your.email@example.com",
-    "url": "https://github.com/yourusername"
+    "name": "Jack Powell",
+    "url": "https://github.com/JackJPowell"
   },
-  "home_page": "https://github.com/yourusername/uc-intg-yourdevice",
+  "home_page": "https://github.com/JackJPowell/uc-intg-channels",
   "setup_data_schema": {
     "title": {
-      "en": "Integration setup",
-      "de": "Integrationssetup",
-      "fr": "Configuration de l'intégration"
+      "en": "Channels Integration Setup"
     },
     "settings": [
       {
         "id": "info",
         "label": {
-          "en": "Setup process",
-          "de": "Setup Fortschritt",
-          "fr": "Progression de la configuration"
+          "en": "Setup"
         },
         "field": {
           "label": {
             "value": {
-              "en": "This integration will allow you to control your device from your Unfolded Circle Remote."
+              "en": "The integration will search for Channels app instances on your network using Bonjour/mDNS. If none are found you will be prompted to enter the IP address manually."
             }
           }
         }
       }
     ]
   },
-  "release_date": "2026-02-01"
+  "release_date": "2026-02-21"
 }

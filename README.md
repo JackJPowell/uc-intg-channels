@@ -1,31 +1,38 @@
-# Unfolded Circle Integration Template
+# Unfolded Circle Channels Integration
 
-A template repository for creating [Unfolded Circle Remote Two/3](https://www.unfoldedcircle.com/) integration drivers using the [ucapi-framework](https://github.com/jackjpowell/ucapi-framework).
+Control the [Channels app](https://getchannels.com/) from your [Unfolded Circle Remote Two/3](https://www.unfoldedcircle.com/). Supports live TV, DVR playback, and more via the Channels HTTP API.
 
-## Getting Started
+Built with the [ucapi-framework](https://github.com/jackjpowell/ucapi-framework).
 
-1. **Clone or use this template** to create your own integration repository
-2. **Rename the integration folder** from `intg-template` to `intg-yourdevice`
-3. **Update the following files** with your device-specific information:
-   - `driver.json` - Integration metadata (name, description, developer info)
-   - `intg-template/const.py` - Device configuration and constants
-   - `intg-template/device.py` - Device communication logic
-   - `intg-template/media_player.py` - Media player entity implementation
-   - `intg-template/setup.py` - Setup flow and configuration forms
-   - `intg-template/discover.py` - Device discovery (if applicable)
+## Features
+
+- **Automatic discovery** via mDNS (`_channels_app._tcp`) with manual IP fallback
+- **Media player entity** with full playback control:
+  - Play/Pause, Stop
+  - Channel Up/Down, Previous Channel
+  - Skip Forward/Backward (chapter marks)
+  - Seek Forward/Backward
+  - Mute Toggle
+  - Now playing metadata: title, episode, artwork, position, duration
+- **Simple commands**: Toggle Closed Captions, Toggle Record, Seek Forward, Seek Backward
+- Polls the Channels app every 10 seconds (configurable)
+
+## Requirements
+
+- [Channels app](https://getchannels.com/) running on Apple TV, NVIDIA SHIELD, or other supported device
+- Channels app must be reachable on port `57000` from the Remote
 
 ## Project Structure
 
 ```
 ├── driver.json              # Integration metadata and configuration
-├── intg-template/           # Main integration code (rename this folder)
+├── intg-channels/
 │   ├── const.py             # Constants and device configuration dataclass
 │   ├── device.py            # Device communication and state management
-│   ├── discover.py          # Network device discovery
+│   ├── discover.py          # mDNS device discovery
 │   ├── driver.py            # Main entry point
 │   ├── media_player.py      # Media player entity
 │   └── setup.py             # Setup flow and user configuration
-├── config/                  # Runtime configuration storage
 ├── Dockerfile               # Container build configuration
 └── requirements.txt         # Python dependencies
 ```
@@ -35,24 +42,18 @@ A template repository for creating [Unfolded Circle Remote Two/3](https://www.un
 ### Prerequisites
 
 - Python 3.11+
-- Docker (optional, for containerized deployment)
+- [uv](https://docs.astral.sh/uv/) (recommended) or pip
 
 ### Local Development
 
-1. Create a virtual environment:
+1. Install dependencies:
    ```bash
-   python3 -m venv venv
-   source venv/bin/activate
+   uv sync
    ```
 
-2. Install dependencies:
+2. Run the integration:
    ```bash
-   pip install -r requirements.txt
-   ```
-
-3. Run the integration:
-   ```bash
-   python intg-template/driver.py
+   python intg-channels/driver.py
    ```
 
 ### Environment Variables
@@ -64,6 +65,7 @@ A template repository for creating [Unfolded Circle Remote Two/3](https://www.un
 | `UC_INTEGRATION_INTERFACE` | Network interface to bind | `0.0.0.0` |
 | `UC_INTEGRATION_HTTP_PORT` | HTTP port for the integration | `9090` |
 | `UC_DISABLE_MDNS_PUBLISH` | Disable mDNS advertisement | `false` |
+| `UC_CHANNELS_POLL_INTERVAL` | Polling interval in seconds | `10` |
 
 ## Deployment
 
@@ -71,63 +73,37 @@ A template repository for creating [Unfolded Circle Remote Two/3](https://www.un
 
 1. Build the integration package (tar.gz file)
 2. Upload via the Remote's web configurator under Integrations
-3. Configure your device through the setup wizard
+3. The integration will scan for Channels app instances on your network automatically, or prompt you to enter the IP address manually
 
 ### Docker
 
 ```bash
 docker run -d \
-  --name=uc-intg-yourdevice \
+  --name=uc-intg-channels \
   --network host \
   -v $(pwd)/config:/config \
   --restart unless-stopped \
-  ghcr.io/yourusername/uc-intg-yourdevice:latest
+  ghcr.io/jackjpowell/uc-intg-channels:latest
 ```
 
 ### Docker Compose
 
 ```yaml
 services:
-  uc-intg-yourdevice:
-    image: ghcr.io/yourusername/uc-intg-yourdevice:latest
-    container_name: uc-intg-yourdevice
+  uc-intg-channels:
+    image: ghcr.io/jackjpowell/uc-intg-channels:latest
+    container_name: uc-intg-channels
     network_mode: host
     volumes:
       - ./config:/config
     restart: unless-stopped
 ```
 
-## Customization Guide
-
-### Adding Entity Types
-
-The template includes a Media Player entity. To add additional entity types:
-
-1. Create a new entity file (e.g., `light.py`, `switch.py`, `climate.py`)
-2. Import and add the entity class to `driver.py`:
-   ```python
-   driver = BaseIntegrationDriver(
-       device_class=Device, entity_classes=[DeviceMediaPlayer, DeviceLight]
-   )
-   ```
-
-### Implementing Device Communication
-
-In `device.py`, implement the communication methods for your device:
-
-1. `connect()` - Establish connection to the device
-2. `disconnect()` - Clean up connection
-3. `verify_connection()` - Check device availability and get current state
-4. Device-specific methods (power control, volume, etc.)
-
-### Customizing the Setup Flow
-
-In `setup.py`, modify the `_MANUAL_INPUT_SCHEMA` to add fields for your device's configuration (IP, port, credentials, etc.).
-
 ## Resources
 
-- [UC Integration Python Library](https://github.com/aitatoi/integration-python-library)
+- [Channels App](https://getchannels.com/)
 - [UCAPI Framework](https://github.com/jackjpowell/ucapi-framework)
+- [UC Integration Python Library](https://github.com/aitatoi/integration-python-library)
 - [Unfolded Circle Developer Documentation](https://github.com/unfoldedcircle/core-api)
 
 ## License
