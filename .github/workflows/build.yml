@@ -137,15 +137,31 @@ jobs:
             fi
           done;
 
+      - name: Checkout (for CHANGELOG)
+        uses: actions/checkout@v4
+
+      - name: Extract release notes from CHANGELOG
+        id: release_notes
+        run: |
+          # Extract the content between the first "## Unreleased" heading and the next "## " heading
+          notes=$(awk '/^## Unreleased/{found=1; next} found && /^## /{exit} found{print}' CHANGELOG.md | sed '/^[[:space:]]*$/d' | sed '/^_.*_$/d')
+          if [ -z "$notes" ]; then
+            notes="No release notes provided."
+          fi
+          # Write to a file to safely handle multiline content
+          echo "$notes" > release_notes.md
+          echo "Release notes:"
+          cat release_notes.md
+
       - name: Create hash file
         run: |
           for filename in *.tar.gz; do echo "sha256  `sha256sum $filename`" >> ${{needs.build.outputs.driver_id}}.hash; done;
 
-      - name: Create release draft
+      - name: Create release
         uses: ncipollo/release-action@v1
         with:
           artifacts: "*.tar.gz,${{needs.build.outputs.driver_id}}.hash"
-          draft: true
-          generateReleaseNotes: true
+          draft: false
+          bodyFile: release_notes.md
           artifactErrorsFailBuild: true
           tag: v${{needs.build.outputs.version}}
