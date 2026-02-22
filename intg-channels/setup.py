@@ -7,19 +7,15 @@ fallback to manual IP address entry.
 :license: Mozilla Public License Version 2.0, see LICENSE for more details.
 """
 
-import asyncio
 import logging
 from typing import Any
 
-from pychannels import Channels
-
-from const import DeviceConfig
+from api import ChannelsClient
+from const import DEFAULT_PORT, DeviceConfig
 from ucapi import IntegrationSetupError, RequestUserInput, SetupError
 from ucapi_framework import BaseSetupFlow
 
 _LOG = logging.getLogger(__name__)
-
-CHANNELS_DEFAULT_PORT = 57000
 
 
 class DeviceSetupFlow(BaseSetupFlow[DeviceConfig]):
@@ -33,7 +29,7 @@ class DeviceSetupFlow(BaseSetupFlow[DeviceConfig]):
         """
         Return the manual entry form for Channels app setup.
 
-        Only an IP address is required - the port is always 57000.
+        IP address is required; port defaults to 57000 and name is optional.
         """
         return RequestUserInput(
             {"en": "Channels App Setup"},
@@ -46,7 +42,7 @@ class DeviceSetupFlow(BaseSetupFlow[DeviceConfig]):
                             "value": {
                                 "en": (
                                     "Enter the IP address of the device running the Channels app. "
-                                    "The app must be open and running on port 57000."
+                                    "The port is 57000 by default and rarely needs to change."
                                 ),
                             }
                         }
@@ -56,6 +52,11 @@ class DeviceSetupFlow(BaseSetupFlow[DeviceConfig]):
                     "field": {"text": {"value": ""}},
                     "id": "address",
                     "label": {"en": "IP Address"},
+                },
+                {
+                    "field": {"number": {"value": DEFAULT_PORT, "min": 1, "max": 65535}},
+                    "id": "port",
+                    "label": {"en": "Port (optional)"},
                 },
                 {
                     "field": {"text": {"value": ""}},
@@ -76,6 +77,10 @@ class DeviceSetupFlow(BaseSetupFlow[DeviceConfig]):
         """
         address = input_values.get("address", "").strip()
         name = input_values.get("name", "").strip()
+        try:
+            port = int(input_values.get("port", DEFAULT_PORT))
+        except (ValueError, TypeError):
+            port = DEFAULT_PORT
 
         if not address:
             _LOG.warning("No address provided, re-displaying form")
@@ -84,32 +89,32 @@ class DeviceSetupFlow(BaseSetupFlow[DeviceConfig]):
         if not name:
             name = f"Channels ({address})"
 
-        _LOG.debug("Attempting to connect to Channels app at %s", address)
+        _LOG.debug("Attempting to connect to Channels app at %s:%d", address, port)
 
         try:
-            # Use pychannels to verify connectivity
-            client = Channels(host=address, port=CHANNELS_DEFAULT_PORT)
-            status = await asyncio.get_event_loop().run_in_executor(None, client.status)
+            client = ChannelsClient(host=address, port=port)
+            status = await client.status()
 
             if status.get("status") == "offline":
-                _LOG.error("Channels app at %s is offline or unreachable", address)
+                _LOG.error("Channels app at %s:%d is offline or unreachable", address, port)
                 return SetupError(IntegrationSetupError.CONNECTION_REFUSED)
 
             _LOG.info(
-                "Successfully connected to Channels app at %s (status: %s)",
+                "Successfully connected to Channels app at %s:%d (status: %s)",
                 address,
+                port,
                 status.get("status"),
             )
 
-            # Use IP address (with dots replaced) as stable identifier
             identifier = address.replace(".", "_")
 
             return DeviceConfig(
                 identifier=identifier,
                 name=name,
                 address=address,
+                port=port,
             )
 
         except Exception as ex:
-            _LOG.error("Failed to connect to Channels app at %s: %s", address, ex)
+            _LOG.error("Failed to connect to Channels app at %s:%d: %s", address, port, ex)
             return SetupError(IntegrationSetupError.CONNECTION_REFUSED)

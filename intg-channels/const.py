@@ -8,6 +8,9 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 
+DEFAULT_PORT = 57000
+
+
 @dataclass
 class DeviceConfig:
     """Configuration for a Channels app device."""
@@ -20,6 +23,9 @@ class DeviceConfig:
 
     address: str
     """IP address or hostname of the Channels app device."""
+
+    port: int = DEFAULT_PORT
+    """Port the Channels app is listening on (default: 57000)."""
 
 
 class SimpleCommands(StrEnum):

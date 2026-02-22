@@ -1,7 +1,7 @@
 """
 Channels App Device Communication Module.
 
-This module handles all communication with the Channels app via pychannels.
+This module handles all communication with the Channels app via the async ChannelsClient.
 It uses a PollingDevice to periodically query the Channels API for status updates.
 
 :license: Mozilla Public License Version 2.0, see LICENSE for more details.
@@ -11,8 +11,7 @@ import logging
 from asyncio import AbstractEventLoop
 from typing import Any
 
-from pychannels import Channels
-
+from api import ChannelsClient
 from const import DeviceConfig
 from ucapi import media_player
 from ucapi import EntityTypes
@@ -64,7 +63,7 @@ class Device(PollingDevice):
             driver=driver,
         )
 
-        self._client = Channels(host=device_config.address, port=57000)
+        self._client = ChannelsClient(host=device_config.address, port=device_config.port)
 
         self._power_state: media_player.States = media_player.States.UNKNOWN
 
@@ -103,7 +102,7 @@ class Device(PollingDevice):
         _LOG.debug(
             "[%s] Establishing connection to Channels at %s", self.log_id, self.address
         )
-        status = await self._loop.run_in_executor(None, self._client.status)
+        status = await self._client.status()
         if status.get("status") == "offline":
             raise ConnectionError(
                 f"Channels app at {self.address} is offline or unreachable"
@@ -118,7 +117,7 @@ class Device(PollingDevice):
 
     async def poll_device(self) -> None:
         try:
-            status = await self._loop.run_in_executor(None, self._client.status)
+            status = await self._client.status()
             if status.get("status") == "offline":
                 _LOG.warning("[%s] Channels app is offline", self.log_id)
                 self._power_state = media_player.States.UNAVAILABLE
@@ -206,66 +205,66 @@ class Device(PollingDevice):
 
     async def play_pause(self) -> None:
         _LOG.debug("[%s] Toggle play/pause", self.log_id)
-        await self._loop.run_in_executor(None, self._client.toggle_pause)
+        await self._client.toggle_pause()
 
     async def pause(self) -> None:
         _LOG.debug("[%s] Pause", self.log_id)
-        await self._loop.run_in_executor(None, self._client.pause)
+        await self._client.pause()
 
     async def play(self) -> None:
         _LOG.debug("[%s] Resume", self.log_id)
-        await self._loop.run_in_executor(None, self._client.resume)
+        await self._client.resume()
 
     async def stop(self) -> None:
         _LOG.debug("[%s] Stop", self.log_id)
-        await self._loop.run_in_executor(None, self._client.stop)
+        await self._client.stop()
 
     async def mute_toggle(self) -> None:
         _LOG.debug("[%s] Toggle mute", self.log_id)
-        await self._loop.run_in_executor(None, self._client.toggle_mute)
+        await self._client.toggle_mute()
 
     async def channel_up(self) -> None:
         _LOG.debug("[%s] Channel up", self.log_id)
-        await self._loop.run_in_executor(None, self._client.channel_up)
+        await self._client.channel_up()
 
     async def channel_down(self) -> None:
         _LOG.debug("[%s] Channel down", self.log_id)
-        await self._loop.run_in_executor(None, self._client.channel_down)
+        await self._client.channel_down()
 
     async def previous_channel(self) -> None:
         _LOG.debug("[%s] Previous channel", self.log_id)
-        await self._loop.run_in_executor(None, self._client.previous_channel)
+        await self._client.previous_channel()
 
     async def seek_forward(self) -> None:
         _LOG.debug("[%s] Seek forward", self.log_id)
-        await self._loop.run_in_executor(None, self._client.seek_forward)
+        await self._client.seek_forward()
 
     async def seek_backward(self) -> None:
         _LOG.debug("[%s] Seek backward", self.log_id)
-        await self._loop.run_in_executor(None, self._client.seek_backward)
+        await self._client.seek_backward()
 
     async def skip_forward(self) -> None:
         _LOG.debug("[%s] Skip forward", self.log_id)
-        await self._loop.run_in_executor(None, self._client.skip_forward)
+        await self._client.skip_forward()
 
     async def skip_backward(self) -> None:
         _LOG.debug("[%s] Skip backward", self.log_id)
-        await self._loop.run_in_executor(None, self._client.skip_backward)
+        await self._client.skip_backward()
 
     async def seek(self, position: int) -> None:
         _LOG.debug("[%s] Seek to %s seconds", self.log_id, position)
         current = self.attributes.MEDIA_POSITION or 0
         delta = position - current
         if delta != 0:
-            await self._loop.run_in_executor(None, lambda: self._client.seek(delta))
+            await self._client.seek(delta)
 
     async def toggle_cc(self) -> None:
         _LOG.debug("[%s] Toggle closed captions", self.log_id)
-        await self._loop.run_in_executor(None, self._client.toggle_cc)
+        await self._client.toggle_cc()
 
     async def toggle_record(self) -> None:
         _LOG.debug("[%s] Toggle record", self.log_id)
-        await self._loop.run_in_executor(None, self._client.toggle_record)
+        await self._client.toggle_record()
 
     def get_device_attributes(self, entity_id: str) -> MediaPlayerAttributes:
         return self.attributes
