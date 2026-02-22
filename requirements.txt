@@ -1,6 +1,16 @@
-# Core dependencies
+aiohttp==3.9.3
+aiosignal==1.4.0
+attrs==25.3.0
+frozenlist==1.7.0
+idna==3.10
+ifaddr==0.2.0
+multidict==6.6.3
+propcache==0.3.2
+protobuf==6.33.4
+pyee==13.0.0
+typing-extensions==4.14.1
 ucapi==0.5.2
 ucapi-framework==1.8.4
-pyee>=9.0
-pychannels==1.2.3
+websockets==15.0.1
+yarl==1.20.1
 zeroconf==0.148.0
