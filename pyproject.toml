@@ -1,6 +1,6 @@
 [project]
 name = "uc-intg-channels"
-version = "0.1.0"
+version = "0.1.1"
 description = "Unfolded Circle Integration for Channels"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -15,8 +15,8 @@ urls.Repository = "https://github.com/jackjpowell/uc-intg-channels"
 
 dependencies = [
     # Core dependencies
-    "ucapi==0.5.1",
-    "ucapi-framework==1.8.2",
+    "ucapi==0.5.2",
+    "ucapi-framework==1.8.4",
     "pyee>=9.0",
     "pychannels==1.2.3",
     "zeroconf==0.148.0",
