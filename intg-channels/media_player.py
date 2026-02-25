@@ -129,6 +129,9 @@ class ChannelsMediaPlayer(MediaPlayer, FrameworkEntity):
                 case SimpleCommands.TOGGLE_CC:
                     await self._device.toggle_cc()
 
+                case SimpleCommands.TOGGLE_PIP:
+                    await self._device.toggle_pip()
+
                 case SimpleCommands.TOGGLE_RECORD:
                     await self._device.toggle_record()
 

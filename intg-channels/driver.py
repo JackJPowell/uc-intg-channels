@@ -13,7 +13,6 @@ import os
 
 from const import DeviceConfig
 from device import Device
-from discover import DeviceDiscovery, CHANNELS_MDNS_SERVICE
 from media_player import ChannelsMediaPlayer
 from setup import DeviceSetupFlow
 from ucapi_framework import BaseConfigManager, BaseIntegrationDriver, get_config_path
@@ -28,10 +27,10 @@ async def main():
     logging.getLogger("media_player").setLevel(level)
     logging.getLogger("device").setLevel(level)
     logging.getLogger("setup").setLevel(level)
-    logging.getLogger("discover").setLevel(level)
 
     driver = BaseIntegrationDriver(
-        device_class=Device, entity_classes=[ChannelsMediaPlayer]  # type: ignore[arg-type]
+        device_class=Device,
+        entity_classes=[ChannelsMediaPlayer],  # type: ignore[arg-type]
     )
 
     driver.config_manager = BaseConfigManager(
@@ -43,12 +42,7 @@ async def main():
 
     await driver.register_all_configured_devices()
 
-    # mDNS discovery for _channels_app._tcp with manual IP fallback
-    discovery = DeviceDiscovery(
-        timeout=5,
-        service_type=CHANNELS_MDNS_SERVICE,
-    )
-    setup_handler = DeviceSetupFlow.create_handler(driver, discovery=discovery)
+    setup_handler = DeviceSetupFlow.create_handler(driver)
 
     await driver.api.init("driver.json", setup_handler)
 

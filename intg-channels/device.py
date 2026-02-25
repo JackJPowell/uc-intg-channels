@@ -262,6 +262,10 @@ class Device(PollingDevice):
         _LOG.debug("[%s] Toggle closed captions", self.log_id)
         await self._client.toggle_cc()
 
+    async def toggle_pip(self) -> None:
+        _LOG.debug("[%s] Toggle picture in picture", self.log_id)
+        await self._client.toggle_pip()
+
     async def toggle_record(self) -> None:
         _LOG.debug("[%s] Toggle record", self.log_id)
         await self._client.toggle_record()

@@ -37,5 +37,6 @@ class SimpleCommands(StrEnum):
 
     TOGGLE_CC = "Toggle Closed Captions"
     TOGGLE_RECORD = "Toggle Record"
+    TOGGLE_PIP = "Toggle Picture in Picture"
     SEEK_FORWARD = "Seek Forward"
     SEEK_BACKWARD = "Seek Backward"

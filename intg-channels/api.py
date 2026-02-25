@@ -118,6 +118,10 @@ class ChannelsClient:
         """Toggle mute state."""
         return await self._command("toggle_mute")
 
+    async def toggle_pip(self) -> dict[str, Any]:
+        """Toggle Picture in Picture."""
+        return await self._command("toggle_pip")
+
     # --- Channels ---
 
     async def channel_up(self) -> dict[str, Any]:

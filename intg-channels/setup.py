@@ -41,8 +41,9 @@ class DeviceSetupFlow(BaseSetupFlow[DeviceConfig]):
                         "label": {
                             "value": {
                                 "en": (
-                                    "Enter the IP address of the device running the Channels app. "
-                                    "The port is 57000 by default and rarely needs to change."
+                                    "Enter the IP address of the Apple TV, NVIDIA SHIELD, or other "
+                                    "device running the Channels client app — not the Channels DVR server. "
+                                    "The app must be open and reachable on port 57000."
                                 ),
                             }
                         }

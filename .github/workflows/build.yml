@@ -139,8 +139,8 @@ jobs:
       - name: Extract release notes from CHANGELOG
         id: release_notes
         run: |
-          # Extract the content between "## Unreleased" and the next "## " heading
-          notes=$(awk '/^## Unreleased/{found=1; next} found && /^## /{exit} found{print}' CHANGELOG.md | sed '/^[[:space:]]*$/d' | sed '/^_.*_$/d')
+          # Extract the content between "## Unreleased" and the next "## " heading or "---" divider
+          notes=$(awk '/^## Unreleased/{found=1; next} found && /^(## |---)/{exit} found{print}' CHANGELOG.md | sed '/^_.*_$/d' | sed -e 's/^[[:space:]]*//' | awk 'NF{found=1} found' | sed -e :a -e '/[^[:blank:]]/,$!d;/^[[:space:]]*$/{$d;N;ba}')
           if [ -z "$notes" ]; then
             notes="No release notes provided."
           fi

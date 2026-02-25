@@ -8,10 +8,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+---
+
+## v0.1.4 — 2026-02-24
+
+### Added
+
+- Toggle Picture in Picture simple command
+
 ### Changed
 
-- Port is now configurable per device (default: 57000) and exposed as an optional field in the setup flow
-- Replaced pychannels dependency with a native async HTTP client
+- Setup now correctly asks for the IP address of the device running the Channels client app, not the DVR server
+- Port is now configurable in the setup flow (default: 57000)
+
+### Removed
+
+- mDNS auto-discovery removed; the Channels client app requires manual IP entry
 
 ---
 
