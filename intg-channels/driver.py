@@ -29,8 +29,7 @@ async def main():
     logging.getLogger("setup").setLevel(level)
 
     driver = BaseIntegrationDriver(
-        device_class=Device,
-        entity_classes=[ChannelsMediaPlayer],  # type: ignore[arg-type]
+        device_class=Device, entity_classes=[ChannelsMediaPlayer]
     )
 
     driver.config_manager = BaseConfigManager(

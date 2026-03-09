@@ -8,27 +8,24 @@ It uses a PollingDevice to periodically query the Channels API for status update
 """
 
 import logging
+import os
 from asyncio import AbstractEventLoop
 from typing import Any
 
 from api import ChannelsClient
 from const import DeviceConfig
 from ucapi import media_player
-from ucapi import EntityTypes
 from ucapi_framework import (
     BaseConfigManager,
     PollingDevice,
     BaseIntegrationDriver,
-    DeviceEvents,
-    EntitySource,
 )
-from ucapi_framework.entity import Entity as FrameworkEntity
 from ucapi_framework.helpers import MediaPlayerAttributes
 
 _LOG = logging.getLogger(__name__)
 
 # Default polling interval in seconds
-POLL_INTERVAL = 5
+POLL_INTERVAL = int(os.getenv("UC_CHANNELS_POLL_INTERVAL", "5"))
 
 # Map Channels status strings to ucapi States
 _CHANNELS_STATE_MAP = {
@@ -44,8 +41,10 @@ class Device(PollingDevice):
     """
     Device class for the Channels app.
 
-    Uses the pychannels client to communicate with the Channels HTTP API.
+    Uses the ChannelsClient to communicate with the Channels HTTP API.
     Polls the device every POLL_INTERVAL seconds to keep state up to date.
+    State is stored in dicts keyed by device identifier and propagated to
+    entities via push_update() / sync_state().
     """
 
     def __init__(
@@ -63,11 +62,11 @@ class Device(PollingDevice):
             driver=driver,
         )
 
-        self._client = ChannelsClient(host=device_config.address, port=device_config.port)
+        self._client = ChannelsClient(
+            host=device_config.address, port=device_config.port
+        )
 
-        self._power_state: media_player.States = media_player.States.UNKNOWN
-
-        self.attributes = MediaPlayerAttributes(
+        self._media_player_attributes = MediaPlayerAttributes(
             STATE=None,
             MUTED=None,
             MEDIA_TYPE=None,
@@ -91,12 +90,12 @@ class Device(PollingDevice):
         return self._device_config.address
 
     @property
-    def state(self) -> media_player.States | None:
-        return self._power_state
-
-    @property
     def log_id(self) -> str:
         return self.name if self.name else self.identifier
+
+    def get_media_player_attributes(self) -> MediaPlayerAttributes:
+        """Return current media player attributes."""
+        return self._media_player_attributes
 
     async def establish_connection(self) -> None:
         _LOG.debug(
@@ -108,7 +107,7 @@ class Device(PollingDevice):
                 f"Channels app at {self.address} is offline or unreachable"
             )
         self._update_state_from_status(status)
-        await self._refresh_entities()
+        self.push_update()
         _LOG.info(
             "[%s] Connected to Channels app, status: %s",
             self.log_id,
@@ -120,88 +119,71 @@ class Device(PollingDevice):
             status = await self._client.status()
             if status.get("status") == "offline":
                 _LOG.warning("[%s] Channels app is offline", self.log_id)
-                self._power_state = media_player.States.UNAVAILABLE
-                self.attributes.STATE = media_player.States.UNAVAILABLE
+                self._media_player_attributes.STATE = media_player.States.UNAVAILABLE
             else:
                 self._update_state_from_status(status)
         except Exception as err:  # pylint: disable=broad-exception-caught
             _LOG.error("[%s] Error polling Channels app: %s", self.log_id, err)
-            self._power_state = media_player.States.UNAVAILABLE
-            self.attributes.STATE = media_player.States.UNAVAILABLE
+            self._media_player_attributes.STATE = media_player.States.UNAVAILABLE
 
-        await self._refresh_entities()
-
-    async def _refresh_entities(self) -> None:
-        """Push current attributes to all registered entities via the driver."""
-        if self._driver is None:
-            # Fallback: emit raw UPDATE event if no driver reference
-            self.events.emit(DeviceEvents.UPDATE, update=self.attributes)
-            return
-
-        for entity in self._driver.filter_entities_by_type(
-            EntityTypes.MEDIA_PLAYER, source=EntitySource.CONFIGURED
-        ):
-            if isinstance(entity, FrameworkEntity):
-                entity.update(self.attributes)
+        self.push_update()
 
     def _update_state_from_status(self, status: dict[str, Any]) -> None:
+        attrs = self._media_player_attributes
+
         channels_status = status.get("status", "stopped")
-        self._power_state = _CHANNELS_STATE_MAP.get(
+        attrs.STATE = _CHANNELS_STATE_MAP.get(
             channels_status, media_player.States.UNKNOWN
         )
-        self.attributes.STATE = self._power_state
-        self.attributes.MUTED = status.get("muted", False)
+        attrs.MUTED = status.get("muted", False)
 
         playback_time = status.get("playback_time")
-        self.attributes.MEDIA_POSITION = (
-            int(playback_time) if playback_time is not None else None
-        )
+        attrs.MEDIA_POSITION = int(playback_time) if playback_time is not None else None
 
         now_playing = status.get("now_playing")
         channel = status.get("channel")
 
         if now_playing:
             content_type = now_playing.get("type", "")
-            if content_type == "movie":
-                self.attributes.MEDIA_TYPE = media_player.MediaType.VIDEO
-            else:
-                self.attributes.MEDIA_TYPE = media_player.MediaType.TVSHOW
+            attrs.MEDIA_TYPE = (
+                media_player.MediaType.VIDEO
+                if content_type == "movie"
+                else media_player.MediaType.TVSHOW
+            )
 
             title = now_playing.get("title")
             episode_title = now_playing.get("episode_title")
             if title and episode_title:
-                self.attributes.MEDIA_TITLE = f"{title} - {episode_title}"
+                attrs.MEDIA_TITLE = f"{title} - {episode_title}"
             elif title:
-                self.attributes.MEDIA_TITLE = title
+                attrs.MEDIA_TITLE = title
             else:
-                self.attributes.MEDIA_TITLE = None
+                attrs.MEDIA_TITLE = None
 
-            self.attributes.MEDIA_ARTIST = (
+            attrs.MEDIA_ARTIST = (
                 channel.get("name") if channel and channel.get("name") else None
             )
 
             image_url = now_playing.get("image_url") or now_playing.get("thumb_url")
             if not image_url and channel:
                 image_url = channel.get("image_url")
-            self.attributes.MEDIA_IMAGE_URL = image_url
+            attrs.MEDIA_IMAGE_URL = image_url
 
             duration = now_playing.get("duration")
-            self.attributes.MEDIA_DURATION = (
-                int(duration) if duration is not None else None
-            )
+            attrs.MEDIA_DURATION = int(duration) if duration is not None else None
 
         elif channel:
-            self.attributes.MEDIA_TYPE = media_player.MediaType.TVSHOW
-            self.attributes.MEDIA_TITLE = channel.get("name")
-            self.attributes.MEDIA_ARTIST = "Ch. " + channel.get("number", "")
-            self.attributes.MEDIA_IMAGE_URL = channel.get("image_url")
-            self.attributes.MEDIA_DURATION = None
+            attrs.MEDIA_TYPE = media_player.MediaType.TVSHOW
+            attrs.MEDIA_TITLE = channel.get("name")
+            attrs.MEDIA_ARTIST = "Ch. " + channel.get("number", "")
+            attrs.MEDIA_IMAGE_URL = channel.get("image_url")
+            attrs.MEDIA_DURATION = None
         else:
-            self.attributes.MEDIA_TYPE = None
-            self.attributes.MEDIA_TITLE = None
-            self.attributes.MEDIA_ARTIST = None
-            self.attributes.MEDIA_IMAGE_URL = None
-            self.attributes.MEDIA_DURATION = None
+            attrs.MEDIA_TYPE = None
+            attrs.MEDIA_TITLE = None
+            attrs.MEDIA_ARTIST = None
+            attrs.MEDIA_IMAGE_URL = None
+            attrs.MEDIA_DURATION = None
 
     async def play_pause(self) -> None:
         _LOG.debug("[%s] Toggle play/pause", self.log_id)
@@ -253,7 +235,8 @@ class Device(PollingDevice):
 
     async def seek(self, position: int) -> None:
         _LOG.debug("[%s] Seek to %s seconds", self.log_id, position)
-        current = self.attributes.MEDIA_POSITION or 0
+        attrs = self._media_player_attributes
+        current = attrs.MEDIA_POSITION or 0
         delta = position - current
         if delta != 0:
             await self._client.seek(delta)
@@ -269,6 +252,3 @@ class Device(PollingDevice):
     async def toggle_record(self) -> None:
         _LOG.debug("[%s] Toggle record", self.log_id)
         await self._client.toggle_record()
-
-    def get_device_attributes(self, entity_id: str) -> MediaPlayerAttributes:
-        return self.attributes

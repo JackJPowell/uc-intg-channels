@@ -12,13 +12,12 @@ import logging
 from typing import Any
 
 import ucapi
-from ucapi import MediaPlayer, media_player, EntityTypes
+from ucapi import media_player, EntityTypes
 from ucapi.media_player import DeviceClasses, Attributes, Features, Commands
 
 import device
 from const import DeviceConfig, SimpleCommands
-from ucapi_framework import create_entity_id
-from ucapi_framework.entity import Entity as FrameworkEntity
+from ucapi_framework import create_entity_id, MediaPlayerEntity
 
 _LOG = logging.getLogger(__name__)
 
@@ -41,11 +40,12 @@ FEATURES = [
 ]
 
 
-class ChannelsMediaPlayer(MediaPlayer, FrameworkEntity):
+class ChannelsMediaPlayer(MediaPlayerEntity):
     """
     Media Player entity for the Channels app.
 
-    Maps ucapi media player commands to Channels API calls via the Device class.
+    Uses the coordinator pattern: subscribes to device UPDATE events via
+    subscribe_to_device() and syncs state through sync_state().
     """
 
     def __init__(self, config_device: DeviceConfig, device_instance: device.Device):
@@ -59,7 +59,7 @@ class ChannelsMediaPlayer(MediaPlayer, FrameworkEntity):
             config_device.name,
             FEATURES,
             attributes={
-                Attributes.STATE: device_instance.state,
+                Attributes.STATE: media_player.States.UNKNOWN,
                 Attributes.MUTED: False,
                 Attributes.MEDIA_TYPE: None,
                 Attributes.MEDIA_TITLE: None,
@@ -77,13 +77,24 @@ class ChannelsMediaPlayer(MediaPlayer, FrameworkEntity):
             cmd_handler=self.handle_command,
         )
 
+        self.subscribe_to_device(device_instance)
+
+    async def sync_state(self) -> None:
+        """Pull current attributes from the device and push to the Remote."""
+        if self._device is None:
+            return
+        self.update(self._device.get_media_player_attributes())
+
     async def handle_command(
         self,
-        _entity: MediaPlayer,
+        _entity: MediaPlayerEntity,
         cmd_id: str,
         params: dict[str, Any] | None,
         __: Any | None = None,
     ) -> ucapi.StatusCodes:
+        if self._device is None:
+            return ucapi.StatusCodes.SERVICE_UNAVAILABLE
+
         _LOG.info("Received command: %s %s", cmd_id, params if params else "")
 
         try:
@@ -145,7 +156,6 @@ class ChannelsMediaPlayer(MediaPlayer, FrameworkEntity):
                     _LOG.warning("Unhandled command: %s", cmd_id)
                     return ucapi.StatusCodes.NOT_IMPLEMENTED
 
-            self.update(self._device.attributes)
             return ucapi.StatusCodes.OK
 
         except Exception as ex:  # pylint: disable=broad-exception-caught

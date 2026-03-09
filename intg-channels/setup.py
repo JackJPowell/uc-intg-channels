@@ -55,7 +55,9 @@ class DeviceSetupFlow(BaseSetupFlow[DeviceConfig]):
                     "label": {"en": "IP Address"},
                 },
                 {
-                    "field": {"number": {"value": DEFAULT_PORT, "min": 1, "max": 65535}},
+                    "field": {
+                        "number": {"value": DEFAULT_PORT, "min": 1, "max": 65535}
+                    },
                     "id": "port",
                     "label": {"en": "Port (optional)"},
                 },
@@ -97,7 +99,9 @@ class DeviceSetupFlow(BaseSetupFlow[DeviceConfig]):
             status = await client.status()
 
             if status.get("status") == "offline":
-                _LOG.error("Channels app at %s:%d is offline or unreachable", address, port)
+                _LOG.error(
+                    "Channels app at %s:%d is offline or unreachable", address, port
+                )
                 return SetupError(IntegrationSetupError.CONNECTION_REFUSED)
 
             _LOG.info(
@@ -117,5 +121,7 @@ class DeviceSetupFlow(BaseSetupFlow[DeviceConfig]):
             )
 
         except Exception as ex:
-            _LOG.error("Failed to connect to Channels app at %s:%d: %s", address, port, ex)
+            _LOG.error(
+                "Failed to connect to Channels app at %s:%d: %s", address, port, ex
+            )
             return SetupError(IntegrationSetupError.CONNECTION_REFUSED)
