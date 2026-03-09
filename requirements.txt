@@ -10,7 +10,7 @@ protobuf==6.33.4
 pyee==13.0.0
 typing-extensions==4.14.1
 ucapi==0.5.2
-ucapi-framework==1.8.4
+ucapi-framework==1.9.0
 websockets==15.0.1
 yarl==1.20.1
 zeroconf==0.148.0

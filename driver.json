@@ -1,6 +1,6 @@
 {
   "driver_id": "channels_driver",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "min_core_api": "0.20.0",
   "name": { "en": "Channels" },
   "icon": "uc:integration",
@@ -32,5 +32,5 @@
       }
     ]
   },
-  "release_date": "2026-02-21"
+  "release_date": "2026-03-09"
 }
