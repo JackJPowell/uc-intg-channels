@@ -11,7 +11,6 @@ API reference: https://getchannels.com/api/
 
 import logging
 from typing import Any
-
 import aiohttp
 
 _LOG = logging.getLogger(__name__)
@@ -72,6 +71,23 @@ class ChannelsClient:
     async def favorite_channels(self) -> list[dict[str, Any]]:
         """Return the list of favorite channels."""
         response = await self._request("GET", "/api/favorite_channels")
+        return response if isinstance(response, list) else []
+
+    # --- DVR Library (Server API) ---
+
+    async def get_shows(self) -> list[dict[str, Any]]:
+        """Return all TV shows in the DVR library."""
+        response = await self._request("GET", "/api/v1/shows")
+        return response if isinstance(response, list) else []
+
+    async def get_show_episodes(self, show_id: str) -> list[dict[str, Any]]:
+        """Return all episodes for a given show ID."""
+        response = await self._request("GET", f"/api/v1/shows/{show_id}/episodes")
+        return response if isinstance(response, list) else []
+
+    async def get_movies(self) -> list[dict[str, Any]]:
+        """Return all movies in the DVR library."""
+        response = await self._request("GET", "/api/v1/movies")
         return response if isinstance(response, list) else []
 
     # --- Playback control ---
