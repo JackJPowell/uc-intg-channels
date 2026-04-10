@@ -12,9 +12,10 @@ import logging
 from typing import Any
 
 import ucapi
-from ucapi import media_player, EntityTypes
+from ucapi import media_player, EntityTypes, BrowseOptions, BrowseResults
 from ucapi.media_player import DeviceClasses, Attributes, Features, Commands
 
+import browser as channels_browser
 import device
 from const import DeviceConfig, SimpleCommands
 from ucapi_framework import create_entity_id, MediaPlayerEntity
@@ -37,6 +38,8 @@ FEATURES = [
     Features.MEDIA_IMAGE_URL,
     Features.MEDIA_TYPE,
     Features.CHANNEL_SWITCHER,
+    Features.BROWSE_MEDIA,
+    Features.PLAY_MEDIA,
 ]
 
 
@@ -68,7 +71,7 @@ class ChannelsMediaPlayer(MediaPlayerEntity):
                 Attributes.MEDIA_POSITION: None,
                 Attributes.MEDIA_DURATION: None,
             },
-            device_class=DeviceClasses.SET_TOP_BOX,
+            device_class=DeviceClasses.SPEAKER,
             options={
                 media_player.Options.SIMPLE_COMMANDS: [
                     member.value for member in SimpleCommands
@@ -152,6 +155,9 @@ class ChannelsMediaPlayer(MediaPlayerEntity):
                 case SimpleCommands.SEEK_BACKWARD:
                     await self._device.seek_backward()
 
+                case Commands.PLAY_MEDIA:
+                    return await self._handle_play_media(params)
+
                 case _:
                     _LOG.warning("Unhandled command: %s", cmd_id)
                     return ucapi.StatusCodes.NOT_IMPLEMENTED
@@ -161,3 +167,24 @@ class ChannelsMediaPlayer(MediaPlayerEntity):
         except Exception as ex:  # pylint: disable=broad-exception-caught
             _LOG.error("Error executing command %s: %s", cmd_id, ex)
             return ucapi.StatusCodes.BAD_REQUEST
+
+    async def browse(self, options: BrowseOptions) -> BrowseResults | ucapi.StatusCodes:
+        """Handle a browse_media request from the Remote."""
+        if self._device is None:
+            _LOG.warning("browse called but no device is connected")
+            return ucapi.StatusCodes.SERVICE_UNAVAILABLE
+        return await channels_browser.browse(self._device, options)
+
+    async def _handle_play_media(self, params: dict | None) -> ucapi.StatusCodes:
+        """Play a DVR recording or movie on the Channels app."""
+        if not params or not (media_id := params.get("media_id")):
+            _LOG.warning("play_media called without media_id")
+            return ucapi.StatusCodes.BAD_REQUEST
+
+        try:
+            await self._device._client.play_recording(media_id)  # pylint: disable=protected-access
+            _LOG.info("play_media: started playback of recording id=%s", media_id)
+            return ucapi.StatusCodes.OK
+        except Exception as ex:  # pylint: disable=broad-exception-caught
+            _LOG.error("play_media failed for media_id=%s: %s", media_id, ex)
+            return ucapi.StatusCodes.SERVER_ERROR
