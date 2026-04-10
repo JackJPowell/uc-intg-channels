@@ -8,6 +8,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+## v0.2.0 — 2026-04-10
+
+### Added
+
+- Media browsing support with a structured library hierarchy (TV Shows → Episodes, Movies)
+- Play media command, allowing items selected from the browser to be queued and played on the active Channels client
+- `browse_media` and `play_media` features registered on the media player entity
+
+---
+
 ## v0.1.5 — 2026-03-09
 
 ### Changes
