@@ -146,9 +146,9 @@ class Device(PollingDevice):
         if now_playing:
             content_type = now_playing.get("type", "")
             attrs.MEDIA_TYPE = (
-                media_player.MediaType.VIDEO
+                media_player.MediaContentType.VIDEO
                 if content_type == "movie"
-                else media_player.MediaType.TVSHOW
+                else media_player.MediaContentType.TV_SHOW
             )
 
             title = now_playing.get("title")
@@ -173,7 +173,7 @@ class Device(PollingDevice):
             attrs.MEDIA_DURATION = int(duration) if duration is not None else None
 
         elif channel:
-            attrs.MEDIA_TYPE = media_player.MediaType.TVSHOW
+            attrs.MEDIA_TYPE = media_player.MediaContentType.TV_SHOW
             attrs.MEDIA_TITLE = channel.get("name")
             attrs.MEDIA_ARTIST = "Ch. " + channel.get("number", "")
             attrs.MEDIA_IMAGE_URL = channel.get("image_url")
